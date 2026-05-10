@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Pacman Controller</title>
+
+        <style>
+    body {
+      margin: 0;
+      background: #05000a;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    h1 {
+      color: #ffd400;
+      text-shadow: 0 0 10px #ff00cc;
+      margin-top: 30px;
+    }
+
+    .status {
+      color: #00ff66;
+      margin-bottom: 30px;
+      font-size: 18px;
+    }
+
+    .controller {
+      display: grid;
+      grid-template-columns: 110px 110px 110px;
+      grid-template-rows: 110px 110px 110px;
+      gap: 15px;
+      justify-content: center;
+      align-items: center;
+      margin-top: 40px;
+    }
+
+    button {
+      width: 110px;
+      height: 110px;
+      border-radius: 25px;
+      border: 3px solid #ff00cc;
+      background: #111;
+      color: #ffd400;
+      font-size: 45px;
+      box-shadow: 0 0 15px #7b2cff, inset 0 0 15px #ff00cc;
+      touch-action: manipulation;
+    }
+
+    button:active {
+      transform: scale(0.92);
+      box-shadow: 0 0 25px #ffd400;
+    }
+
+    .empty {
+      width: 110px;
+      height: 110px;
+    }
+
+    .stop {
+      margin-top: 40px;
+      width: 260px;
+      height: 80px;
+      font-size: 32px;
+      color: #ff3355;
+    }
+  </style>
+    </head>
+
+    <body>
+
+        <h1>PAC-MAN CONTROLLER</h1>
+        <div class="status" id="status">Connecting...</div>
+
+        <div class="controller">
+            <div class="empty"></div>
+            <button onclick="sendDirection('up')">▲</button>
+            <div class="empty"></div>
+
+            <button onclick="sendDirection('left')">◀</button>
+            <button onclick="sendDirection('stop')">●</button>
+            <button onclick="sendDirection('right')">▶</button>
+
+            <div class="empty"></div>
+            <button onclick="sendDirection('down')">▼</button>
+            <div class="empty"></div>
+        </div>
+
+        <button class="stop" onclick="sendDirection('stop')">STOP</button>
+
+        <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { initializeApp } from "firebase/app";
+    import { getAnalytics } from "firebase/analytics";
+
+    const firebaseConfig = {
+    apiKey: "AIzaSyAXMzvgX8CovVUx9MZTSJzUd0l341H30Yk",
+    authDomain: "packmanrealtime.firebaseapp.com",
+    databaseURL: "https://packmanrealtime-default-rtdb.firebaseio.com",
+    projectId: "packmanrealtime",
+    storageBucket: "packmanrealtime.firebasestorage.app",
+    messagingSenderId: "247963806574",
+    appId: "1:247963806574:web:df55fe89bdc3cee5346f7f",
+    measurementId: "G-LH9K6EV8NC"
+    };
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+
+    const directionRef = ref(database, "controllers/player1/direction");
+
+    document.getElementById("status").innerText = "CONNECTED";
+
+    window.sendDirection = function(direction) {
+      set(directionRef, direction)
+        .then(() => {
+          console.log("Sent:", direction);
+        })
+        .catch((error) => {
+          console.error(error);
+          document.getElementById("status").innerText = "ERROR";
+        });
+    };
+  </script>
+
+    </body>
+</html>
