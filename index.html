@@ -1,175 +1,278 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pacman Controller</title>
 
-<title>Pacman Joystick</title>
+  <style>
+    body {
+      margin: 0;
+      background: #05000a;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      overflow: hidden;
+      user-select: none;
+      touch-action: none;
+    }
 
-<style>
+    h1 {
+      color: #ffd400;
+      text-shadow: 0 0 15px #ff00cc;
+      margin-top: 30px;
+      font-size: 32px;
+    }
 
-body{
-    margin:0;
-    background:#05000a;
-    overflow:hidden;
-    font-family:Arial;
-    color:white;
-    text-align:center;
-}
+    .status {
+      color: #00ff88;
+      font-size: 22px;
+      margin-top: 15px;
+      min-height: 30px;
+    }
 
-h1{
-    color:#ffd400;
-    margin-top:30px;
-    text-shadow:0 0 15px #ff00cc;
-}
+    #startPanel {
+      margin-top: 120px;
+    }
 
-#joystickBase{
-    width:260px;
-    height:260px;
-    border-radius:50%;
-    border:5px solid #ff00cc;
-    margin:80px auto;
-    position:relative;
+    #startButton {
+      width: 260px;
+      height: 90px;
+      border-radius: 30px;
+      border: 4px solid #ffd400;
+      background: #111;
+      color: #ffd400;
+      font-size: 38px;
+      font-weight: bold;
+      box-shadow: 0 0 25px #ffd400, inset 0 0 20px #ff00cc;
+    }
 
-    box-shadow:
-    0 0 40px #7b2cff,
-    inset 0 0 40px #ff00cc;
-}
+    #startButton:active {
+      transform: scale(0.94);
+    }
 
-#joystick{
-    width:100px;
-    height:100px;
-    border-radius:50%;
-    background:#ffd400;
-    position:absolute;
-    left:80px;
-    top:80px;
+    #joystickPanel {
+      display: none;
+      margin-top: 60px;
+    }
 
-    box-shadow:
-    0 0 25px #ffd400;
-}
+    #joystickBase {
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      border: 5px solid #ff00cc;
+      margin: 60px auto 0 auto;
+      position: relative;
+      box-shadow: 0 0 40px #7b2cff, inset 0 0 40px #ff00cc;
+    }
 
-.status{
-    color:#00ff88;
-    font-size:24px;
-}
+    #joystick {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: #ffd400;
+      position: absolute;
+      left: 80px;
+      top: 80px;
+      box-shadow: 0 0 30px #ffd400;
+    }
 
-</style>
+    #resultPanel {
+      display: none;
+      margin-top: 130px;
+      font-size: 48px;
+      font-weight: bold;
+      text-shadow: 0 0 25px #ff00cc;
+    }
+
+    .win {
+      color: #00ff88;
+    }
+
+    .lose {
+      color: #ff3355;
+    }
+  </style>
 </head>
 
 <body>
 
-<h1>PACMAN JOYSTICK</h1>
+  <h1>PAC-MAN CONTROLLER</h1>
 
-<div class="status" id="status">CONNECTED</div>
+  <div class="status" id="status">CONNECTING...</div>
 
-<div id="joystickBase">
-    <div id="joystick"></div>
-</div>
+  <div id="startPanel">
+    <button id="startButton">START</button>
+  </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  <div id="joystickPanel">
+    <div id="joystickBase">
+      <div id="joystick"></div>
+    </div>
+  </div>
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAXMzvgX8CovVUx9MZTSJzUd0l341H30Yk",
-  authDomain: "packmanrealtime.firebaseapp.com",
-  databaseURL: "https://packmanrealtime-default-rtdb.firebaseio.com/",
-  projectId: "packmanrealtime",
-  storageBucket: "packmanrealtime.firebasestorage.app",
-  messagingSenderId: "247963806574",
-  appId: "1:247963806574:web:df55fe89bdc3cee5346f7f",
-  measurementId: "G-LH9K6EV8NC"
-};
+  <div id="resultPanel"></div>
 
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-const directionRef = ref(database, "controllers/player1/direction");
+    const firebaseConfig = {
+      apiKey: "AIzaSyAXMzvgX8CovVUx9MZTSJzUd0l341H30Yk",
+      authDomain: "packmanrealtime.firebaseapp.com",
+      databaseURL: "https://packmanrealtime-default-rtdb.firebaseio.com/",
+      projectId: "packmanrealtime",
+      storageBucket: "packmanrealtime.firebasestorage.app",
+      messagingSenderId: "247963806574",
+      appId: "1:247963806574:web:df55fe89bdc3cee5346f7f",
+      measurementId: "G-LH9K6EV8NC"
+    };
 
-const joystick = document.getElementById("joystick");
-const base = document.getElementById("joystickBase");
-const statusText = document.getElementById("status");
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
 
-let dragging = false;
-let lastDirection = "";
+    const directionRef = ref(database, "controllers/player1/direction");
+    const commandRef = ref(database, "controllers/player1/gameCommand");
+    const gameStateRef = ref(database, "controllers/player1/gameState");
 
-const centerX = 130;
-const centerY = 130;
+    const statusText = document.getElementById("status");
+    const startPanel = document.getElementById("startPanel");
+    const joystickPanel = document.getElementById("joystickPanel");
+    const resultPanel = document.getElementById("resultPanel");
+    const startButton = document.getElementById("startButton");
 
-statusText.innerText = "CONNECTED";
+    const joystick = document.getElementById("joystick");
+    const base = document.getElementById("joystickBase");
 
-function sendDirection(dir) {
-  if (dir === lastDirection) return;
+    let dragging = false;
+    let lastDirection = "";
 
-  lastDirection = dir;
+    const centerX = 130;
+    const centerY = 130;
 
-  set(directionRef, dir)
-    .then(() => {
-      statusText.innerText = "SENT: " + dir.toUpperCase();
-      console.log("Sent:", dir);
-    })
-    .catch((error) => {
-      statusText.innerText = "ERROR";
-      console.error(error);
+    statusText.innerText = "CONNECTED";
+
+    startButton.addEventListener("click", () => {
+      set(commandRef, "start");
+      set(directionRef, "right");
+      statusText.innerText = "START SENT";
     });
-}
 
-function resetJoystick() {
-  joystick.style.left = "80px";
-  joystick.style.top = "80px";
-  sendDirection("stop");
-}
+    onValue(gameStateRef, (snapshot) => {
+      const state = snapshot.val();
 
-base.addEventListener("touchstart", (e) => {
-  e.preventDefault();
-  dragging = true;
-});
+      console.log("Game State:", state);
 
-base.addEventListener("touchmove", (e) => {
-  e.preventDefault();
+      if (state === "menu" || state === null) {
+        showMenu();
+      }
+      else if (state === "playing") {
+        showJoystick();
+      }
+      else if (state === "win") {
+        showResult("YOU WIN!", true);
+      }
+      else if (state === "lose") {
+        showResult("GAME OVER", false);
+      }
+    });
 
-  if (!dragging) return;
+    function showMenu() {
+      startPanel.style.display = "block";
+      joystickPanel.style.display = "none";
+      resultPanel.style.display = "none";
+      statusText.innerText = "PRESS START";
+      resetJoystickVisual();
+    }
 
-  const rect = base.getBoundingClientRect();
+    function showJoystick() {
+      startPanel.style.display = "none";
+      joystickPanel.style.display = "block";
+      resultPanel.style.display = "none";
+      statusText.innerText = "PLAYING";
+    }
 
-  let x = e.touches[0].clientX - rect.left;
-  let y = e.touches[0].clientY - rect.top;
+    function showResult(text, isWin) {
+      startPanel.style.display = "none";
+      joystickPanel.style.display = "none";
+      resultPanel.style.display = "block";
 
-  let dx = x - centerX;
-  let dy = y - centerY;
+      resultPanel.innerText = text;
+      resultPanel.className = isWin ? "win" : "lose";
 
-  const distance = Math.sqrt(dx * dx + dy * dy);
-  const maxDistance = 80;
+      statusText.innerText = "WAITING...";
+      resetJoystickVisual();
+    }
 
-  if (distance > maxDistance) {
-    dx = dx / distance * maxDistance;
-    dy = dy / distance * maxDistance;
-  }
+    function sendDirection(dir) {
+      if (dir === lastDirection) return;
 
-  joystick.style.left = (centerX + dx - 50) + "px";
-  joystick.style.top = (centerY + dy - 50) + "px";
+      lastDirection = dir;
 
-  if (Math.abs(dx) > Math.abs(dy)) {
-    if (dx > 20) sendDirection("right");
-    else if (dx < -20) sendDirection("left");
-  } else {
-    if (dy > 20) sendDirection("down");
-    else if (dy < -20) sendDirection("up");
-  }
-});
+      set(directionRef, dir)
+        .then(() => {
+          statusText.innerText = "MOVE: " + dir.toUpperCase();
+          console.log("Sent:", dir);
+        })
+        .catch((error) => {
+          statusText.innerText = "ERROR";
+          console.error(error);
+        });
+    }
 
-base.addEventListener("touchend", (e) => {
-  e.preventDefault();
-  dragging = false;
-  resetJoystick();
-});
+    function resetJoystickVisual() {
+      joystick.style.left = "80px";
+      joystick.style.top = "80px";
+      dragging = false;
+    }
 
-base.addEventListener("touchcancel", (e) => {
-  e.preventDefault();
-  dragging = false;
-  resetJoystick();
-});
-</script>
+    base.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      dragging = true;
+    });
+
+    base.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+
+      if (!dragging) return;
+
+      const rect = base.getBoundingClientRect();
+
+      let x = e.touches[0].clientX - rect.left;
+      let y = e.touches[0].clientY - rect.top;
+
+      let dx = x - centerX;
+      let dy = y - centerY;
+
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const maxDistance = 80;
+
+      if (distance > maxDistance) {
+        dx = dx / distance * maxDistance;
+        dy = dy / distance * maxDistance;
+      }
+
+      joystick.style.left = (centerX + dx - 50) + "px";
+      joystick.style.top = (centerY + dy - 50) + "px";
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 20) sendDirection("right");
+        else if (dx < -20) sendDirection("left");
+      } else {
+        if (dy > 20) sendDirection("down");
+        else if (dy < -20) sendDirection("up");
+      }
+    });
+
+    base.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      resetJoystickVisual();
+    });
+
+    base.addEventListener("touchcancel", (e) => {
+      e.preventDefault();
+      resetJoystickVisual();
+    });
+  </script>
 
 </body>
 </html>
