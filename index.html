@@ -46,10 +46,6 @@
       box-shadow: 0 0 25px #ffd400, inset 0 0 20px #ff00cc;
     }
 
-    #startButton:active {
-      transform: scale(0.94);
-    }
-
     #joystickPanel {
       display: none;
       margin-top: 60px;
@@ -84,195 +80,184 @@
       text-shadow: 0 0 25px #ff00cc;
     }
 
-    .win {
-      color: #00ff88;
-    }
-
-    .lose {
-      color: #ff3355;
-    }
+    .win { color: #00ff88; }
+    .lose { color: #ff3355; }
   </style>
 </head>
 
 <body>
 
-  <h1>PAC-MAN CONTROLLER</h1>
+<h1>PAC-MAN CONTROLLER</h1>
+<div class="status" id="status">CONNECTING...</div>
 
-  <div class="status" id="status">CONNECTING...</div>
+<div id="startPanel">
+  <button id="startButton">START</button>
+</div>
 
-  <div id="startPanel">
-    <button id="startButton">START</button>
+<div id="joystickPanel">
+  <div id="joystickBase">
+    <div id="joystick"></div>
   </div>
+</div>
 
-  <div id="joystickPanel">
-    <div id="joystickBase">
-      <div id="joystick"></div>
-    </div>
-  </div>
+<div id="resultPanel"></div>
 
-  <div id="resultPanel"></div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyAXMzvgX8CovVUx9MZTSJzUd0l341H30Yk",
+    authDomain: "packmanrealtime.firebaseapp.com",
+    databaseURL: "https://packmanrealtime-default-rtdb.firebaseio.com/",
+    projectId: "packmanrealtime",
+    storageBucket: "packmanrealtime.firebasestorage.app",
+    messagingSenderId: "247963806574",
+    appId: "1:247963806574:web:df55fe89bdc3cee5346f7f",
+    measurementId: "G-LH9K6EV8NC"
+  };
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyAXMzvgX8CovVUx9MZTSJzUd0l341H30Yk",
-      authDomain: "packmanrealtime.firebaseapp.com",
-      databaseURL: "https://packmanrealtime-default-rtdb.firebaseio.com/",
-      projectId: "packmanrealtime",
-      storageBucket: "packmanrealtime.firebasestorage.app",
-      messagingSenderId: "247963806574",
-      appId: "1:247963806574:web:df55fe89bdc3cee5346f7f",
-      measurementId: "G-LH9K6EV8NC"
-    };
+  const app = initializeApp(firebaseConfig);
+  const database = getDatabase(app);
 
-    const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
+  const directionRef = ref(database, "controllers/player1/direction");
+  const commandRef = ref(database, "controllers/player1/gameCommand");
+  const gameStateRef = ref(database, "controllers/player1/gameState");
 
-    const directionRef = ref(database, "controllers/player1/direction");
-    const commandRef = ref(database, "controllers/player1/gameCommand");
-    const gameStateRef = ref(database, "controllers/player1/gameState");
+  const statusText = document.getElementById("status");
+  const startPanel = document.getElementById("startPanel");
+  const joystickPanel = document.getElementById("joystickPanel");
+  const resultPanel = document.getElementById("resultPanel");
+  const startButton = document.getElementById("startButton");
+  const joystick = document.getElementById("joystick");
+  const base = document.getElementById("joystickBase");
 
-    const statusText = document.getElementById("status");
-    const startPanel = document.getElementById("startPanel");
-    const joystickPanel = document.getElementById("joystickPanel");
-    const resultPanel = document.getElementById("resultPanel");
-    const startButton = document.getElementById("startButton");
+  let dragging = false;
+  let lastDirection = "";
 
-    const joystick = document.getElementById("joystick");
-    const base = document.getElementById("joystickBase");
+  const centerX = 130;
+  const centerY = 130;
 
-    let dragging = false;
-    let lastDirection = "";
+  statusText.innerText = "CONNECTED";
 
-    const centerX = 130;
-    const centerY = 130;
-
-    statusText.innerText = "CONNECTED";
-
-    startButton.addEventListener("click", () => {
-      set(commandRef, "start");
-      set(directionRef, "right");
-      statusText.innerText = "START SENT";
+  startButton.addEventListener("click", () => {
+    set(commandRef, {
+      command: "start",
+      time: Date.now()
     });
 
-    onValue(gameStateRef, (snapshot) => {
-      const state = snapshot.val();
+    set(directionRef, "right");
+    statusText.innerText = "START SENT";
+  });
 
-      console.log("Game State:", state);
+  onValue(gameStateRef, (snapshot) => {
+    const state = snapshot.val();
 
-      if (state === "menu" || state === null) {
-        showMenu();
-      }
-      else if (state === "playing") {
-        showJoystick();
-      }
-      else if (state === "win") {
-        showResult("YOU WIN!", true);
-      }
-      else if (state === "lose") {
-        showResult("GAME OVER", false);
-      }
+    if (state === "playing") {
+      showJoystick();
+    }
+    else if (state === "win") {
+      showResult("YOU WIN!", true);
+    }
+    else if (state === "lose") {
+      showResult("GAME OVER", false);
+    }
+    else {
+      showMenu();
+    }
+  });
+
+  function showMenu() {
+    startPanel.style.display = "block";
+    joystickPanel.style.display = "none";
+    resultPanel.style.display = "none";
+    statusText.innerText = "PRESS START";
+    resetJoystickVisual();
+  }
+
+  function showJoystick() {
+    startPanel.style.display = "none";
+    joystickPanel.style.display = "block";
+    resultPanel.style.display = "none";
+    statusText.innerText = "PLAYING";
+  }
+
+  function showResult(text, isWin) {
+    startPanel.style.display = "none";
+    joystickPanel.style.display = "none";
+    resultPanel.style.display = "block";
+
+    resultPanel.innerText = text;
+    resultPanel.className = isWin ? "win" : "lose";
+
+    statusText.innerText = "WAITING...";
+    resetJoystickVisual();
+  }
+
+  function sendDirection(dir) {
+    if (dir === lastDirection) return;
+
+    lastDirection = dir;
+
+    set(directionRef, dir).then(() => {
+      statusText.innerText = "MOVE: " + dir.toUpperCase();
     });
+  }
 
-    function showMenu() {
-      startPanel.style.display = "block";
-      joystickPanel.style.display = "none";
-      resultPanel.style.display = "none";
-      statusText.innerText = "PRESS START";
-      resetJoystickVisual();
+  function resetJoystickVisual() {
+    joystick.style.left = "80px";
+    joystick.style.top = "80px";
+    dragging = false;
+  }
+
+  base.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    dragging = true;
+  });
+
+  base.addEventListener("touchmove", (e) => {
+    e.preventDefault();
+
+    if (!dragging) return;
+
+    const rect = base.getBoundingClientRect();
+
+    let x = e.touches[0].clientX - rect.left;
+    let y = e.touches[0].clientY - rect.top;
+
+    let dx = x - centerX;
+    let dy = y - centerY;
+
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const maxDistance = 80;
+
+    if (distance > maxDistance) {
+      dx = dx / distance * maxDistance;
+      dy = dy / distance * maxDistance;
     }
 
-    function showJoystick() {
-      startPanel.style.display = "none";
-      joystickPanel.style.display = "block";
-      resultPanel.style.display = "none";
-      statusText.innerText = "PLAYING";
+    joystick.style.left = (centerX + dx - 50) + "px";
+    joystick.style.top = (centerY + dy - 50) + "px";
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (dx > 20) sendDirection("right");
+      else if (dx < -20) sendDirection("left");
+    } else {
+      if (dy > 20) sendDirection("down");
+      else if (dy < -20) sendDirection("up");
     }
+  });
 
-    function showResult(text, isWin) {
-      startPanel.style.display = "none";
-      joystickPanel.style.display = "none";
-      resultPanel.style.display = "block";
+  base.addEventListener("touchend", (e) => {
+    e.preventDefault();
+    resetJoystickVisual();
+  });
 
-      resultPanel.innerText = text;
-      resultPanel.className = isWin ? "win" : "lose";
-
-      statusText.innerText = "WAITING...";
-      resetJoystickVisual();
-    }
-
-    function sendDirection(dir) {
-      if (dir === lastDirection) return;
-
-      lastDirection = dir;
-
-      set(directionRef, dir)
-        .then(() => {
-          statusText.innerText = "MOVE: " + dir.toUpperCase();
-          console.log("Sent:", dir);
-        })
-        .catch((error) => {
-          statusText.innerText = "ERROR";
-          console.error(error);
-        });
-    }
-
-    function resetJoystickVisual() {
-      joystick.style.left = "80px";
-      joystick.style.top = "80px";
-      dragging = false;
-    }
-
-    base.addEventListener("touchstart", (e) => {
-      e.preventDefault();
-      dragging = true;
-    });
-
-    base.addEventListener("touchmove", (e) => {
-      e.preventDefault();
-
-      if (!dragging) return;
-
-      const rect = base.getBoundingClientRect();
-
-      let x = e.touches[0].clientX - rect.left;
-      let y = e.touches[0].clientY - rect.top;
-
-      let dx = x - centerX;
-      let dy = y - centerY;
-
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      const maxDistance = 80;
-
-      if (distance > maxDistance) {
-        dx = dx / distance * maxDistance;
-        dy = dy / distance * maxDistance;
-      }
-
-      joystick.style.left = (centerX + dx - 50) + "px";
-      joystick.style.top = (centerY + dy - 50) + "px";
-
-      if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 20) sendDirection("right");
-        else if (dx < -20) sendDirection("left");
-      } else {
-        if (dy > 20) sendDirection("down");
-        else if (dy < -20) sendDirection("up");
-      }
-    });
-
-    base.addEventListener("touchend", (e) => {
-      e.preventDefault();
-      resetJoystickVisual();
-    });
-
-    base.addEventListener("touchcancel", (e) => {
-      e.preventDefault();
-      resetJoystickVisual();
-    });
-  </script>
+  base.addEventListener("touchcancel", (e) => {
+    e.preventDefault();
+    resetJoystickVisual();
+  });
+</script>
 
 </body>
 </html>
