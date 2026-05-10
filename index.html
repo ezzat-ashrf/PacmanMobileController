@@ -1,128 +1,166 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Pacman Controller</title>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        <style>
-    body {
-      margin: 0;
-      background: #05000a;
-      color: white;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      overflow: hidden;
-    }
+<title>Pacman Joystick</title>
 
-    h1 {
-      color: #ffd400;
-      text-shadow: 0 0 10px #ff00cc;
-      margin-top: 30px;
-    }
+<style>
 
-    .status {
-      color: #00ff66;
-      margin-bottom: 30px;
-      font-size: 18px;
-    }
+body{
+    margin:0;
+    background:#05000a;
+    overflow:hidden;
+    font-family:Arial;
+    color:white;
+    text-align:center;
+}
 
-    .controller {
-      display: grid;
-      grid-template-columns: 110px 110px 110px;
-      grid-template-rows: 110px 110px 110px;
-      gap: 15px;
-      justify-content: center;
-      align-items: center;
-      margin-top: 40px;
-    }
+h1{
+    color:#ffd400;
+    margin-top:30px;
+    text-shadow:0 0 15px #ff00cc;
+}
 
-    button {
-      width: 110px;
-      height: 110px;
-      border-radius: 25px;
-      border: 3px solid #ff00cc;
-      background: #111;
-      color: #ffd400;
-      font-size: 45px;
-      box-shadow: 0 0 15px #7b2cff, inset 0 0 15px #ff00cc;
-      touch-action: manipulation;
-    }
+#joystickBase{
+    width:260px;
+    height:260px;
+    border-radius:50%;
+    border:5px solid #ff00cc;
+    margin:80px auto;
+    position:relative;
 
-    button:active {
-      transform: scale(0.92);
-      box-shadow: 0 0 25px #ffd400;
-    }
+    box-shadow:
+    0 0 40px #7b2cff,
+    inset 0 0 40px #ff00cc;
+}
 
-    .empty {
-      width: 110px;
-      height: 110px;
-    }
+#joystick{
+    width:100px;
+    height:100px;
+    border-radius:50%;
+    background:#ffd400;
+    position:absolute;
+    left:80px;
+    top:80px;
 
-    .stop {
-      margin-top: 40px;
-      width: 260px;
-      height: 80px;
-      font-size: 32px;
-      color: #ff3355;
-    }
-  </style>
-    </head>
+    box-shadow:
+    0 0 25px #ffd400;
+}
 
-    <body>
+.status{
+    color:#00ff88;
+    font-size:24px;
+}
 
-        <h1>PAC-MAN CONTROLLER</h1>
-        <div class="status" id="status">Connecting...</div>
+</style>
+</head>
 
-        <div class="controller">
-            <div class="empty"></div>
-            <button onclick="sendDirection('up')">▲</button>
-            <div class="empty"></div>
+<body>
 
-            <button onclick="sendDirection('left')">◀</button>
-            <button onclick="sendDirection('stop')">●</button>
-            <button onclick="sendDirection('right')">▶</button>
+<h1>PACMAN JOYSTICK</h1>
 
-            <div class="empty"></div>
-            <button onclick="sendDirection('down')">▼</button>
-            <div class="empty"></div>
-        </div>
+<div class="status" id="status">CONNECTED</div>
 
-        <button class="stop" onclick="sendDirection('stop')">STOP</button>
+<div id="joystickBase">
+    <div id="joystick"></div>
+</div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAXMzvgX8CovVUx9MZTSJzUd0l341H30Yk",
-    authDomain: "packmanrealtime.firebaseapp.com",
-    databaseURL: "https://packmanrealtime-default-rtdb.firebaseio.com/",
-    projectId: "packmanrealtime",
-    storageBucket: "packmanrealtime.firebasestorage.app",
-    messagingSenderId: "247963806574",
-    appId: "1:247963806574:web:df55fe89bdc3cee5346f7f",
-    measurementId: "G-LH9K6EV8NC"
-  };
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-  const app = initializeApp(firebaseConfig);
-  const database = getDatabase(app);
+const firebaseConfig = {
 
-  const directionRef = ref(database, "controllers/player1/direction");
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+    projectId: "YOUR_PROJECT",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "XXXX",
+    appId: "XXXX"
+};
 
-  document.getElementById("status").innerText = "CONNECTED";
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
 
-  window.sendDirection = function(direction) {
-    set(directionRef, direction)
-      .then(() => {
-        console.log("Sent:", direction);
-        document.getElementById("status").innerText = "SENT: " + direction.toUpperCase();
-      })
-      .catch((error) => {
-        console.error(error);
-        document.getElementById("status").innerText = "ERROR";
-      });
-  };
+const directionRef = ref(database,"controllers/player1/direction");
+
+const joystick = document.getElementById("joystick");
+const base = document.getElementById("joystickBase");
+
+let dragging = false;
+
+const centerX = 130;
+const centerY = 130;
+
+function sendDirection(dir)
+{
+    set(directionRef, dir);
+    document.getElementById("status").innerText = dir.toUpperCase();
+}
+
+function resetJoystick()
+{
+    joystick.style.left = "80px";
+    joystick.style.top = "80px";
+
+    sendDirection("stop");
+}
+
+base.addEventListener("touchstart", () =>
+{
+    dragging = true;
+});
+
+base.addEventListener("touchmove", (e)=>
+{
+    if(!dragging) return;
+
+    const rect = base.getBoundingClientRect();
+
+    let x = e.touches[0].clientX - rect.left;
+    let y = e.touches[0].clientY - rect.top;
+
+    let dx = x - centerX;
+    let dy = y - centerY;
+
+    const distance = Math.sqrt(dx*dx + dy*dy);
+    const maxDistance = 80;
+
+    if(distance > maxDistance)
+    {
+        dx = dx / distance * maxDistance;
+        dy = dy / distance * maxDistance;
+    }
+
+    joystick.style.left = (centerX + dx - 50) + "px";
+    joystick.style.top = (centerY + dy - 50) + "px";
+
+    if(Math.abs(dx) > Math.abs(dy))
+    {
+        if(dx > 20)
+            sendDirection("right");
+        else if(dx < -20)
+            sendDirection("left");
+    }
+    else
+    {
+        if(dy > 20)
+            sendDirection("down");
+        else if(dy < -20)
+            sendDirection("up");
+    }
+});
+
+base.addEventListener("touchend", () =>
+{
+    dragging = false;
+    resetJoystick();
+});
+
 </script>
 
-    </body>
+</body>
 </html>
