@@ -89,40 +89,40 @@
 
         <button class="stop" onclick="sendDirection('stop')">STOP</button>
 
-        <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-    import { initializeApp } from "firebase/app";
-    import { getAnalytics } from "firebase/analytics";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-    const firebaseConfig = {
+  const firebaseConfig = {
     apiKey: "AIzaSyAXMzvgX8CovVUx9MZTSJzUd0l341H30Yk",
     authDomain: "packmanrealtime.firebaseapp.com",
-    databaseURL: "https://packmanrealtime-default-rtdb.firebaseio.com",
+    databaseURL: "https://packmanrealtime-default-rtdb.firebaseio.com/",
     projectId: "packmanrealtime",
     storageBucket: "packmanrealtime.firebasestorage.app",
     messagingSenderId: "247963806574",
     appId: "1:247963806574:web:df55fe89bdc3cee5346f7f",
     measurementId: "G-LH9K6EV8NC"
-    };
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
+  };
 
-    const directionRef = ref(database, "controllers/player1/direction");
+  const app = initializeApp(firebaseConfig);
+  const database = getDatabase(app);
 
-    document.getElementById("status").innerText = "CONNECTED";
+  const directionRef = ref(database, "controllers/player1/direction");
 
-    window.sendDirection = function(direction) {
-      set(directionRef, direction)
-        .then(() => {
-          console.log("Sent:", direction);
-        })
-        .catch((error) => {
-          console.error(error);
-          document.getElementById("status").innerText = "ERROR";
-        });
-    };
-  </script>
+  document.getElementById("status").innerText = "CONNECTED";
+
+  window.sendDirection = function(direction) {
+    set(directionRef, direction)
+      .then(() => {
+        console.log("Sent:", direction);
+        document.getElementById("status").innerText = "SENT: " + direction.toUpperCase();
+      })
+      .catch((error) => {
+        console.error(error);
+        document.getElementById("status").innerText = "ERROR";
+      });
+  };
+</script>
 
     </body>
 </html>
