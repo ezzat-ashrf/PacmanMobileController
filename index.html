@@ -67,99 +67,108 @@ h1{
 </div>
 
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 const firebaseConfig = {
-
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://packmanrealtime-default-rtdb.firebaseio.com/",
-    projectId: "YOUR_PROJECT",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "XXXX",
-    appId: "XXXX"
+  apiKey: "AIzaSyAXMzvgX8CovVUx9MZTSJzUd0l341H30Yk",
+  authDomain: "packmanrealtime.firebaseapp.com",
+  databaseURL: "https://packmanrealtime-default-rtdb.firebaseio.com/",
+  projectId: "packmanrealtime",
+  storageBucket: "packmanrealtime.firebasestorage.app",
+  messagingSenderId: "247963806574",
+  appId: "1:247963806574:web:df55fe89bdc3cee5346f7f",
+  measurementId: "G-LH9K6EV8NC"
 };
 
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-const directionRef = ref(database,"controllers/player1/direction");
+const directionRef = ref(database, "controllers/player1/direction");
 
 const joystick = document.getElementById("joystick");
 const base = document.getElementById("joystickBase");
+const statusText = document.getElementById("status");
 
 let dragging = false;
+let lastDirection = "";
 
 const centerX = 130;
 const centerY = 130;
 
-function sendDirection(dir)
-{
-    set(directionRef, dir);
-    document.getElementById("status").innerText = dir.toUpperCase();
+statusText.innerText = "CONNECTED";
+
+function sendDirection(dir) {
+  if (dir === lastDirection) return;
+
+  lastDirection = dir;
+
+  set(directionRef, dir)
+    .then(() => {
+      statusText.innerText = "SENT: " + dir.toUpperCase();
+      console.log("Sent:", dir);
+    })
+    .catch((error) => {
+      statusText.innerText = "ERROR";
+      console.error(error);
+    });
 }
 
-function resetJoystick()
-{
-    joystick.style.left = "80px";
-    joystick.style.top = "80px";
-
-    sendDirection("stop");
+function resetJoystick() {
+  joystick.style.left = "80px";
+  joystick.style.top = "80px";
+  sendDirection("stop");
 }
 
-base.addEventListener("touchstart", () =>
-{
-    dragging = true;
+base.addEventListener("touchstart", (e) => {
+  e.preventDefault();
+  dragging = true;
 });
 
-base.addEventListener("touchmove", (e)=>
-{
-    if(!dragging) return;
+base.addEventListener("touchmove", (e) => {
+  e.preventDefault();
 
-    const rect = base.getBoundingClientRect();
+  if (!dragging) return;
 
-    let x = e.touches[0].clientX - rect.left;
-    let y = e.touches[0].clientY - rect.top;
+  const rect = base.getBoundingClientRect();
 
-    let dx = x - centerX;
-    let dy = y - centerY;
+  let x = e.touches[0].clientX - rect.left;
+  let y = e.touches[0].clientY - rect.top;
 
-    const distance = Math.sqrt(dx*dx + dy*dy);
-    const maxDistance = 80;
+  let dx = x - centerX;
+  let dy = y - centerY;
 
-    if(distance > maxDistance)
-    {
-        dx = dx / distance * maxDistance;
-        dy = dy / distance * maxDistance;
-    }
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  const maxDistance = 80;
 
-    joystick.style.left = (centerX + dx - 50) + "px";
-    joystick.style.top = (centerY + dy - 50) + "px";
+  if (distance > maxDistance) {
+    dx = dx / distance * maxDistance;
+    dy = dy / distance * maxDistance;
+  }
 
-    if(Math.abs(dx) > Math.abs(dy))
-    {
-        if(dx > 20)
-            sendDirection("right");
-        else if(dx < -20)
-            sendDirection("left");
-    }
-    else
-    {
-        if(dy > 20)
-            sendDirection("down");
-        else if(dy < -20)
-            sendDirection("up");
-    }
+  joystick.style.left = (centerX + dx - 50) + "px";
+  joystick.style.top = (centerY + dy - 50) + "px";
+
+  if (Math.abs(dx) > Math.abs(dy)) {
+    if (dx > 20) sendDirection("right");
+    else if (dx < -20) sendDirection("left");
+  } else {
+    if (dy > 20) sendDirection("down");
+    else if (dy < -20) sendDirection("up");
+  }
 });
 
-base.addEventListener("touchend", () =>
-{
-    dragging = false;
-    resetJoystick();
+base.addEventListener("touchend", (e) => {
+  e.preventDefault();
+  dragging = false;
+  resetJoystick();
 });
 
+base.addEventListener("touchcancel", (e) => {
+  e.preventDefault();
+  dragging = false;
+  resetJoystick();
+});
 </script>
 
 </body>
