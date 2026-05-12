@@ -75,7 +75,7 @@
     #resultPanel {
       display: none;
       margin-top: 130px;
-      font-size: 48px;
+      font-size: 42px;
       font-weight: bold;
       text-shadow: 0 0 25px #ff00cc;
     }
@@ -88,6 +88,7 @@
 <body>
 
 <h1>PAC-MAN CONTROLLER</h1>
+
 <div class="status" id="status">CONNECTING...</div>
 
 <div id="startPanel">
@@ -104,7 +105,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAXMzvgX8CovVUx9MZTSJzUd0l341H30Yk",
@@ -123,6 +124,7 @@
   const directionRef = ref(database, "controllers/player1/direction");
   const commandRef = ref(database, "controllers/player1/gameCommand");
   const gameStateRef = ref(database, "controllers/player1/gameState");
+  const activePlayerRef = ref(database, "controllers/player1/activePlayerId");
 
   const statusText = document.getElementById("status");
   const startPanel = document.getElementById("startPanel");
@@ -132,6 +134,14 @@
   const joystick = document.getElementById("joystick");
   const base = document.getElementById("joystickBase");
 
+  let myPlayerId = localStorage.getItem("pacmanPlayerId");
+  if (!myPlayerId) {
+    myPlayerId = "phone_" + Date.now() + "_" + Math.floor(Math.random() * 9999);
+    localStorage.setItem("pacmanPlayerId", myPlayerId);
+  }
+
+  let activePlayerId = "";
+  let currentGameState = "";
   let dragging = false;
   let lastDirection = "";
 
@@ -140,32 +150,59 @@
 
   statusText.innerText = "CONNECTED";
 
-  startButton.addEventListener("click", () => {
-    set(commandRef, {
-      command: "start",
-      time: Date.now()
-    });
-
-    set(directionRef, "right");
-    statusText.innerText = "START SENT";
+  onValue(activePlayerRef, (snapshot) => {
+    activePlayerId = snapshot.val() || "";
+    refreshUI();
   });
 
   onValue(gameStateRef, (snapshot) => {
-    const state = snapshot.val();
+    currentGameState = snapshot.val() || "menu";
+    refreshUI();
+  });
 
-    if (state === "playing") {
-      showJoystick();
+  startButton.addEventListener("click", async () => {
+    const stateSnap = await get(gameStateRef);
+    const state = stateSnap.val() || "menu";
+
+    const playerSnap = await get(activePlayerRef);
+    const currentActivePlayer = playerSnap.val() || "";
+
+    if (state === "playing" && currentActivePlayer !== myPlayerId) {
+      showBusy();
+      return;
     }
-    else if (state === "win") {
+
+    await set(activePlayerRef, myPlayerId);
+
+    await set(commandRef, {
+      command: "start",
+      playerId: myPlayerId,
+      time: Date.now()
+    });
+
+    await set(directionRef, "right");
+
+    statusText.innerText = "START SENT";
+  });
+
+  function refreshUI() {
+    if (currentGameState === "playing") {
+      if (activePlayerId === myPlayerId) {
+        showJoystick();
+      } else {
+        showBusy();
+      }
+    }
+    else if (currentGameState === "win") {
       showResult("YOU WIN!", true);
     }
-    else if (state === "lose") {
+    else if (currentGameState === "lose") {
       showResult("GAME OVER", false);
     }
     else {
       showMenu();
     }
-  });
+  }
 
   function showMenu() {
     startPanel.style.display = "block";
@@ -182,19 +219,29 @@
     statusText.innerText = "PLAYING";
   }
 
+  function showBusy() {
+    startPanel.style.display = "none";
+    joystickPanel.style.display = "none";
+    resultPanel.style.display = "block";
+    resultPanel.innerText = "CONTROLLER BUSY";
+    resultPanel.className = "lose";
+    statusText.innerText = "ANOTHER PLAYER IS PLAYING";
+    resetJoystickVisual();
+  }
+
   function showResult(text, isWin) {
     startPanel.style.display = "none";
     joystickPanel.style.display = "none";
     resultPanel.style.display = "block";
-
     resultPanel.innerText = text;
     resultPanel.className = isWin ? "win" : "lose";
-
     statusText.innerText = "WAITING...";
     resetJoystickVisual();
   }
 
   function sendDirection(dir) {
+    if (currentGameState !== "playing") return;
+    if (activePlayerId !== myPlayerId) return;
     if (dir === lastDirection) return;
 
     lastDirection = dir;
